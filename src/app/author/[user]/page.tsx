@@ -240,6 +240,15 @@ export default async function AuthorPage({ params }: { params: Promise<{ user: s
                 )}
             </section>
             <section className="travel-guide-third-section-main-container">
+                {/* Trello #17: la página no tenía ningún H2 (sólo el H1 y los H3 de las cards). */}
+                <h2 style={{
+                    fontFamily: 'var(--font-dk-otago)',
+                    fontSize: '2rem',
+                    textAlign: 'center',
+                    marginBottom: '1.5rem'
+                }}>
+                    Articles by {currentUser.name || 'Sofia Gonzalez'}
+                </h2>
                 <AuthorPosts
                     initialPosts={formattedPosts}
                     authorId={currentUser.id}

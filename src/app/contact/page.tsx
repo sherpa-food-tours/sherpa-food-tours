@@ -92,6 +92,8 @@ export default async function ContactPage() {
                         Email us at <a href="mailto:info@sherpafoodtours.com">info@sherpafoodtours.com</a>
                     </p>
                     {/* <FormContact /> */}
+                    {/* Trello #17: sin este H2 la página no tenía ninguno. contact.css ya lo estiliza. */}
+                    <h2>Send us a message</h2>
                     <div>
                         <TallyForm />
                     </div>
