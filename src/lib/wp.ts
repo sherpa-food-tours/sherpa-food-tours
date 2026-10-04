@@ -49,10 +49,17 @@ export class WpUnavailableError extends Error {
     }
 }
 
-async function wpFetch(url: string, options?: RequestInit & { next?: { revalidate?: number } }): Promise<Response> {
+// Tag de la Data Cache para todo lo que viene de WordPress: /api/revalidate lo invalida
+// cuando se guarda contenido, así la página regenerada no se arma con respuestas de WP
+// cacheadas de hasta dos horas. Sólo se agrega a los fetch que ya se cacheaban: ponerlo
+// en los que no tenían `next` cambiaría cómo se cachean.
+export const WP_CACHE_TAG = "wp";
+
+async function wpFetch(url: string, options?: RequestInit & { next?: { revalidate?: number; tags?: string[] } }): Promise<Response> {
+    const init = options?.next ? { ...options, next: { ...options.next, tags: [WP_CACHE_TAG] } } : options;
     let response: Response;
     try {
-        response = await withWpSlot(() => fetchWithRetry(url, options, 3));
+        response = await withWpSlot(() => fetchWithRetry(url, init, 3));
     } catch (error) {
         throw new WpUnavailableError(url, String(error));
     }

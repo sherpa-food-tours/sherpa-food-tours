@@ -5,6 +5,7 @@ import Footer from "../ui/components/footer";
 import NavBarWrapper from "@/ui/components/nav-bar-wrapper";
 import { wp } from "@/lib/wp";
 import FareharborScript from "@/ui/components/FareharborScript";
+import AffiliateTracker from "@/ui/components/affiliate-tracker";
 import { FareHarborProvider } from "@/context/fareharbor-context";
 import { Cookies } from "./Cookies";
 import MarketingScripts from "@/ui/components/marketing-scripts";
@@ -163,6 +164,7 @@ export default async function RootLayout({
           <WhatsAppButtonWrapper />
         </Suspense>
         <FareharborScript />
+        <AffiliateTracker />
 
         <Suspense fallback={null}>
           <MarketingScripts />

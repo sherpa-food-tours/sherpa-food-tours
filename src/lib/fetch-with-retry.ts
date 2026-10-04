@@ -5,7 +5,7 @@
  */
 export async function fetchWithRetry(
     url: string,
-    options?: RequestInit & { next?: { revalidate?: number } },
+    options?: RequestInit & { next?: { revalidate?: number; tags?: string[] } },
     retries = 2,
     delay = 500
 ): Promise<Response> {

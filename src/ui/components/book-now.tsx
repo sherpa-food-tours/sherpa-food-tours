@@ -1,5 +1,6 @@
 "use client";
 
+import { withAffiliateRef } from "@/lib/affiliate";
 import { generateEventId, sendServerEvent } from "@/lib/tiktok-client";
 
 // El parámetro ga4t le dice a FareHarbor a qué propiedad GA4 atribuir la reserva. Estaba
@@ -57,7 +58,9 @@ export default function BookNowButton({ link, data_tour }: { link?: string; data
           content_id: data_tour || "general",
         });
         const tempAnchor = document.createElement("a");
-        tempAnchor.href = href;
+        // El código de afiliado se lee recién acá, en el click: en el render del server
+        // no hay cookie. AffiliateTracker también lo agregaría, esto lo deja explícito.
+        tempAnchor.href = withAffiliateRef(href);
         if (data_tour) {
           tempAnchor.setAttribute("data-fareharbor-lightframe", data_tour);
         }
