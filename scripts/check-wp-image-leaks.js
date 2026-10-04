@@ -34,7 +34,19 @@ const ROOT = process.argv[2] || path.join(".next", "server", "app");
 // URL cruda aparece siempre y no significa nada — lo que importa es qué termina pidiendo
 // el browser. Las URLs ya optimizadas llevan la de WP percent-encodeada
 // (%2Fwp-content%2Fuploads%2F), así que no matchean este patrón.
-const LEAK = /(?:src|srcset)="[^"]*?\/wp-content\/uploads\/[^"]*"/gi;
+//
+// El src de <video>/<source> queda afuera a propósito: el optimizador no sirve video, así
+// que esos sí apuntan a WordPress. Se cubren poster= y los url() de estilos inline (los
+// fondos de About Us se escaparon así, porque este patrón sólo miraba src y srcset).
+const LEAK = /(?:<img\b[^>]*?\s(?:src|srcset)|\sposter|<source\b[^>]*?\ssrcset)="[^"]*?\/wp-content\/uploads\/[^"]*"|url\((?:&quot;|["'])?[^)"'&]*\/wp-content\/uploads\/[^)]*\)/gi;
+
+// Pedidos al optimizador que devuelven 400: remotePatterns sólo acepta https, y el
+// optimizador no procesa video ni PDF.
+const BROKEN_OPTIMIZER = /\/_next\/image\/?\?url=(?:http%3A[^"&]*|[^"&]*?\.(?:mp4|mov|webm|m4v|pdf)(?:%3F[^"&]*)?)(?=[&"])/gi;
+
+// El fallback de getPostImage. Puede ser legítimo (media borrada en WordPress), por eso
+// es aviso y no error; pero si aparece en muchas páginas, WordPress falló durante el build.
+const PLACEHOLDER = /<img\b[^>]*imagen-de-portada[^>]*>/gi;
 
 function walk(dir) {
     let out = [];
@@ -62,11 +74,20 @@ if (files.length === 0) {
 }
 
 const leaks = [];
+const placeholders = [];
 for (const file of files) {
     const html = fs.readFileSync(file, "utf8");
-    for (const match of html.match(LEAK) || []) {
-        leaks.push({ page: path.relative(ROOT, file).replace(/\.html$/, ""), attr: match });
-    }
+    const page = path.relative(ROOT, file).replace(/\.html$/, "");
+    for (const match of html.match(LEAK) || []) leaks.push({ page, attr: match });
+    for (const match of html.match(BROKEN_OPTIMIZER) || []) leaks.push({ page, attr: `400 en el optimizador: ${match}` });
+    if (PLACEHOLDER.test(html)) placeholders.push(page);
+    PLACEHOLDER.lastIndex = 0;
+}
+
+if (placeholders.length > 0) {
+    console.warn(`! ${placeholders.length} página(s) muestran la imagen de fallback (imagen-de-portada):`);
+    for (const p of placeholders.slice(0, 10)) console.warn(`    /${p}`);
+    console.warn("  Si es media borrada en WordPress, está bien. Si son muchas, WordPress falló durante el build.");
 }
 
 if (leaks.length === 0) {

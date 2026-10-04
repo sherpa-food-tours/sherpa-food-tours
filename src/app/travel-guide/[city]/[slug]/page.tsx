@@ -1,6 +1,6 @@
 
 import { slugify } from "@/app/helpers/slugify";
-import { wp } from "@/lib/wp";
+import { wp, WpUnavailableError } from "@/lib/wp";
 import { absoluteOptimizedUrl, optimizedUrl } from "@/lib/wp-media";
 import { WPPost } from "@/types/post";
 // import "./travel-guide-slug.css";
@@ -207,6 +207,7 @@ export default async function BlogPost({ params }: { params: Promise<{ city: str
                     image: tourImage
                 };
             } catch (error) {
+                if (error instanceof WpUnavailableError) throw error;
                 console.error("Error fetching tour:", tour?.id, error);
                 return null;
             }

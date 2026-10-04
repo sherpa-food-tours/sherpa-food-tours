@@ -1,5 +1,6 @@
 "use client";
 
+import { optimizedUrl } from "@/lib/wp-media";
 import type { OurValues } from "../types";
 
 
@@ -12,7 +13,7 @@ export default function OurValues({ items }: { items: OurValues[] }) {
                     {items.map((element, i) => (
                         <div className="value-card" key={element.title + i}>
                             <div className="value-card-img" style={{
-                                backgroundImage: `url(${element.background_image.img})`,
+                                backgroundImage: `url(${optimizedUrl(element.background_image.img, 1080)})`,
                                 backgroundSize: "cover",
                                 backgroundPosition: "center"
                             }}>
@@ -41,7 +42,7 @@ export default function OurValues({ items }: { items: OurValues[] }) {
                             >
                                 <div
                                     className="aspect-[4/3] w-full bg-cover bg-center bg-no-repeat"
-                                    style={{ backgroundImage: `url(${element.background_image.img})` }}
+                                    style={{ backgroundImage: `url(${optimizedUrl(element.background_image.img, 1080)})` }}
                                 />
                                 <div className="flex min-h-[210px] flex-col gap-3 p-5 text-[#333333] lg:min-h-[240px] lg:p-6">
                                     <h3 className="font-dk-otago text-[1.6rem] leading-tight lg:text-[1.9rem]">

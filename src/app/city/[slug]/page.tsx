@@ -7,7 +7,7 @@ import OurExperiencesSection from "@/app/components/our-experiences";
 import { siteTitle, metaDescription } from "@/app/helpers/seo";
 // import "./city.css";
 import { fetchImages } from "@/app/utils/fetchImages";
-import { wp } from "@/lib/wp";
+import { wp, WpUnavailableError } from "@/lib/wp";
 import { absoluteOptimizedUrl, optimizedUrl } from "@/lib/wp-media";
 import AsFeaturedIn from "@/ui/components/as-featured-in";
 import BookNowButton from "@/ui/components/book-now";
@@ -267,13 +267,13 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
                 const postInfo = await wp.getPostInfoById(id);
                 if (!postInfo) return null;
 
-                const postImage = await wp.getPostImage(postInfo.featured_media).catch(() => null);
-                const author = await wp.getAuthor(postInfo.author).catch(() => null);
+                const postImage = await wp.getPostImage(postInfo.featured_media);
+                const author = await wp.getAuthor(postInfo.author);
 
                 const ciudades = postInfo?.acf?.ciudades;
                 if (!Array.isArray(ciudades) || ciudades.length === 0) return null;
 
-                const city_name = await wp.getCity(ciudades[0]).catch(() => null);
+                const city_name = await wp.getCity(ciudades[0]);
                 if (!city_name) return null;
 
                 return {
@@ -283,6 +283,9 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
                     city: city_name,
                 };
             } catch (e) {
+                // Con WordPress caído la página no se regenera (queda la anterior); sin
+                // esto el artículo desaparecía de "Get to know the city" por una hora.
+                if (e instanceof WpUnavailableError) throw e;
                 console.warn("❗ Error cargando post", id, e);
                 return null;
             }
@@ -522,8 +525,10 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
                                 const citySlug = post.city_slug && post.city_slug !== 'undefined' && post.city_slug !== 'sin-ciudad'
                                     ? post.city_slug
                                     : null;
-                                // const href = citySlug ? `/travel-guide/${citySlug}/${post.slug}` : `/travel-guide`;
-                                const href = `/travel-guide/${slug}/${post.slug}/`
+                                // El segmento de ciudad del artículo sale del título de la ciudad,
+                                // no del slug de esta página (rio-de-janeiro-food-tours y no
+                                // rio-de-janeiro): con el slug, cada link pasaba por un 308.
+                                const href = `/travel-guide/${citySlug ?? slug}/${post.slug}/`
 
                                 return (
                                     <Link

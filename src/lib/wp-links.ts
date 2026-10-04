@@ -16,7 +16,11 @@
 // de que nadie edite nada. El dato en WP sigue mal: la lista para corregir el origen está
 // en la bitácora.
 
+import { absoluteOptimizedUrl, isOptimizableImage } from "./wp-media";
+import { resolveRedirectChain } from "./redirects";
+
 const SITE_ORIGIN = "https://www.sherpafoodtours.com";
+const WP_ORIGIN = process.env.NEXT_PUBLIC_WP_URL || "https://staging.sherpafoodtours.com";
 
 // Todo lo que representa al mismo sitio, escrito de tres formas distintas por los editores.
 const INTERNAL_HOSTS = new Set([
@@ -25,8 +29,13 @@ const INTERNAL_HOSTS = new Set([
     "staging.sherpafoodtours.com",
 ]);
 
-/** Normaliza el href de un link interno. Devuelve null si no hay que tocarlo. */
-function normalizeInternalHref(href: string): string | null {
+/**
+ * Normaliza el href de un link interno. Devuelve null si no hay que tocarlo.
+ *
+ * articleCities (slug del artículo → segmento de ciudad de su URL) permite llevar los
+ * links de artículos a la URL canónica; sin él quedan como estén, con su redirect.
+ */
+function normalizeInternalHref(href: string, articleCities?: Map<string, string>): string | null {
     let url: URL;
     try {
         url = new URL(href, SITE_ORIGIN);
@@ -34,6 +43,14 @@ function normalizeInternalHref(href: string): string | null {
         return null;
     }
     if (!INTERNAL_HOSTS.has(url.hostname)) return null;
+
+    // Links a archivos de la biblioteca (la foto en tamaño completo de una galería, un
+    // PDF): en www no existe /wp-content, así que pasarlos a www daba 404. Las imágenes
+    // van al optimizador, igual que los <img>; el resto sigue en WordPress.
+    if (url.pathname.startsWith("/wp-content/uploads/")) {
+        const archivo = `${WP_ORIGIN}${url.pathname}`;
+        return isOptimizableImage(archivo) ? absoluteOptimizedUrl(archivo, 1920) : archivo;
+    }
 
     url.protocol = "https:";
     url.hostname = "www.sherpafoodtours.com";
@@ -46,6 +63,19 @@ function normalizeInternalHref(href: string): string | null {
     // Barra final, salvo que la ruta apunte a un archivo (.pdf, .jpg…).
     const esArchivo = /\.[a-z0-9]{2,5}$/i.test(url.pathname);
     if (!url.pathname.endsWith("/") && !esArchivo) url.pathname += "/";
+
+    // Destino final en vez de la URL vieja: slugs de tours renombrados, /travels-guide/,
+    // slugs sueltos de WordPress… Cada uno era un 308 (o dos) antes de llegar a la página.
+    url.pathname = resolveRedirectChain(url.pathname) ?? url.pathname;
+
+    // Artículos: el segmento de ciudad sale del título de la ciudad en WordPress, y el
+    // artículo redirige si no coincide. Se resuelve acá para que el link no dependa de
+    // cómo lo escribió el editor.
+    const articulo = url.pathname.match(/^\/travel-guide\/([^/]+)\/([^/]+)\/$/);
+    const ciudad = articulo ? articleCities?.get(articulo[2]) : undefined;
+    if (articulo && ciudad && ciudad !== articulo[1]) {
+        url.pathname = `/travel-guide/${ciudad}/${articulo[2]}/`;
+    }
 
     return url.toString();
 }
@@ -60,13 +90,13 @@ function anchorVacio(interior: string): boolean {
  * Normaliza los links internos del HTML que llega de WordPress. Idempotente: correr esto
  * dos veces da el mismo resultado que correrlo una.
  */
-export function rewriteInternalLinks(html: string): string {
+export function rewriteInternalLinks(html: string, articleCities?: Map<string, string>): string {
     if (!html) return html;
 
     return html.replace(
         /<a\b([^>]*?)href=(["'])(.*?)\2([^>]*)>([\s\S]*?)<\/a>/gi,
         (match, antes: string, comilla: string, href: string, despues: string, interior: string) => {
-            const nuevoHref = normalizeInternalHref(href);
+            const nuevoHref = normalizeInternalHref(href, articleCities);
             // Externo: se deja intacto, incluso si viene vacío.
             if (nuevoHref === null) return match;
             // Interno y vacío: el link entero sobra.
