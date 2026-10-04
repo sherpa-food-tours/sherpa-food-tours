@@ -12,6 +12,7 @@ import { absoluteOptimizedUrl, optimizedUrl } from "@/lib/wp-media";
 import AsFeaturedIn from "@/ui/components/as-featured-in";
 import BookNowButton from "@/ui/components/book-now";
 import MainImage from "@/ui/components/main-image";
+import { articleDateTime, formatArticleDate } from "@/app/helpers/article-date";
 import JustRelax from "@/ui/components/just-relax";
 import TravelGuideCardsSection from "@/ui/components/travel-guide-cards-section";
 import CommentElement from "@/ui/components/comment";
@@ -145,6 +146,9 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
     const mainImageId = [featured_media]
 
     const mainImage = await fetchImages(mainImageId);
+    // Alt de respaldo de la hero. El título de las ciudades en WP ya termina en "Food Tours":
+    // concatenarlo de nuevo daba "Rio de Janeiro Food Tours Food Tours".
+    const heroAlt = `${cityData.city_name.replace(/\s+food tours$/i, "")} Food Tours - Sherpa Food Tours`;
     const asFeatureInImages = await fetchImages(asFeatureInImagesId);
 
 
@@ -340,7 +344,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
                 <section className="city-not-found">
                     <div className="main-section-container">
                         <div className="image-container">
-                            <MainImage src={mainImage[0].img} alt={mainImage[0].alt || `${cityData.city_name} Food Tours - Sherpa Food Tours`} />
+                            <MainImage src={mainImage[0].img} alt={mainImage[0].alt || heroAlt} />
                         </div>
                     </div>
                     <div className="data-container">
@@ -453,7 +457,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
                 <section>
                     <div className="main-section-container">
                         <div className="image-container">
-                            <MainImage src={mainImage[0].img} alt={mainImage[0].alt || `${cityData.city_name} Food Tours - Sherpa Food Tours`} />
+                            <MainImage src={mainImage[0].img} alt={mainImage[0].alt || heroAlt} />
                         </div>
                         <div className="data-container">
                             <div className="data">
@@ -548,6 +552,12 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
                                             <div className="preview-author">
                                                 <span>Por:</span> {post.author_name.name}
                                             </div>
+                                            {/* Trello #9: la misma fecha que las cards del travel guide. */}
+                                            {formatArticleDate(post.modified) && (
+                                                <p className="preview-updated">
+                                                    Updated <time dateTime={articleDateTime(post.modified)}>{formatArticleDate(post.modified)}</time>
+                                                </p>
+                                            )}
                                         </div>
                                     </Link>
                                 )

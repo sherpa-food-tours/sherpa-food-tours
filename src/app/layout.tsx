@@ -76,6 +76,12 @@ export const metadata: Metadata = {
 };
 
 
+// Contenedor de Google Tag Manager de Propellic (Trello #35). GA4 se sigue cargando desde
+// el código (ga-loader / ga-config, más abajo): el contenedor NO debe tener una etiqueta
+// de GA4 de page_view, o cada visita se contaría dos veces. Comparte el dataLayer con el
+// consent-default, así que respeta el Consent Mode v2 que ya está configurado.
+const GTM_ID = "GTM-5KKNKJR";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -140,6 +146,20 @@ export default async function RootLayout({
   `}
         </Script>
 
+        <Script
+          id="gtm"
+          strategy="afterInteractive"
+          data-cookieconsent="ignore"
+        >
+          {`
+    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','${GTM_ID}');
+  `}
+        </Script>
+
         <Cookies />
 
         {/* Preconnect para recursos críticos de terceros */}
@@ -151,6 +171,14 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://analytics.tiktok.com" />
       </head>
       <body className={`${excelsior.variable} ${dkOtago.variable} antialiased`}>
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
         <FareHarborProvider>
         {marqueeBanner.ok && marqueeBanner.data && marqueeBanner.data.length > 0 && (
           <MarqueeBanner bannerTitle={marqueeBanner.data[0].title.rendered} bannerLink={marqueeBanner.data[0].acf?.redirect_to} />

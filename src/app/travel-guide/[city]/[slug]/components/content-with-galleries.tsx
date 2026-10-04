@@ -23,6 +23,7 @@ export default function ContentWithGalleries({ htmlContent }: ContentWithGalleri
             .replace(/<script[^>]*instagram\.com\/embed\.js[^>]*><\/script>/gi, '')
             .replace(/<script[^>]*platform\.twitter\.com\/widgets\.js[^>]*><\/script>/gi, '')
             .replace(/<script[^>]*platform\.x\.com\/widgets\.js[^>]*><\/script>/gi, '')
+            .replace(/<script[^>]*tiktok\.com\/embed\.js[^>]*><\/script>/gi, '')
             .replace(/http:\/\/staging\.sherpafoodtours\.com/gi, 'https://staging.sherpafoodtours.com')
     );
 
@@ -175,6 +176,20 @@ export default function ContentWithGalleries({ htmlContent }: ContentWithGalleri
         script.src = 'https://platform.twitter.com/widgets.js';
         script.async = true;
         script.onload = processEmbeds;
+        document.body.appendChild(script);
+    }, [processedNodes, htmlContent]);
+
+    // TikTok (Trello #30): WordPress pega <blockquote class="tiktok-embed"> + su script, que
+    // por innerHTML no se ejecuta. embed.js no expone un "process()" como Instagram: escanea
+    // el DOM al cargar, así que se re-inyecta para que encuentre los blockquotes nuevos.
+    useEffect(() => {
+        if (!htmlContent.includes('tiktok-embed')) return;
+
+        document.getElementById('tiktok-embed-js')?.remove();
+        const script = document.createElement('script');
+        script.id = 'tiktok-embed-js';
+        script.src = 'https://www.tiktok.com/embed.js';
+        script.async = true;
         document.body.appendChild(script);
     }, [processedNodes, htmlContent]);
 
