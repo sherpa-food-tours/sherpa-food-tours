@@ -487,7 +487,7 @@ export default async function TourPage({ params }: { params: Promise<{ slug: str
                                 <h2>USD{ACF_PRICE}</h2>
                             </div>
                         }
-                        {check_availability && <CheckAvailabilityButton link={acf.fareharbor?.link} data_tour={acf.fareharbor?.id} />}
+                        {check_availability && <CheckAvailabilityButton link={acf.fareharbor?.link} data_tour={acf.fareharbor?.id} calendarLink={acf.calendar_widget ?? null} />}
                     </div>
                 </section>
                 <div className="section-container-desktop">
@@ -520,10 +520,13 @@ export default async function TourPage({ params }: { params: Promise<{ slug: str
                             </div>
                         </section>
                     </div>
-                    <div className="calendar-container">
-
-                        <Calendar link={acf.calendar_widget ?? null} />
-                    </div>
+                    {/* Los tours privados no tienen calendario en WP: sin esto quedaba una caja
+                        vacía de 600px al costado de la descripción. */}
+                    {acf.calendar_widget && (
+                        <div className="calendar-container">
+                            <Calendar link={acf.calendar_widget} />
+                        </div>
+                    )}
                 </div>
                 <section className="tour-conditions">
                     <div className="tour-condition-container">
