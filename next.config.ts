@@ -52,6 +52,12 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 31536000, // 1 año de caché para imágenes optimizadas
     dangerouslyAllowSVG: true,
+    // Feedback de Propellic (Trello #32): por defecto el optimizador responde
+    // content-disposition: attachment, así que abrir o copiar la URL de una imagen la
+    // descargaba en vez de mostrarla, y Google Images maneja mal los adjuntos. El
+    // attachment existe para neutralizar SVGs con scripts; eso lo sigue cubriendo el
+    // sandbox de contentSecurityPolicy, que por eso no se toca.
+    contentDispositionType: 'inline',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
