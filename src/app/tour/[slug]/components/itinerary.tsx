@@ -2,7 +2,13 @@
 
 import type { Itinerary } from "@/types/itinerary";
 import { useEffect, useRef } from "react";
-import { optimizedUrl } from "@/lib/wp-media";
+import { optimizedUrl, optimizedSrcSet } from "@/lib/wp-media";
+
+// .stop-item-img solo se ve por debajo de 460px (arriba queda display:none) en una caja de
+// aspect-ratio 4/3. El ancho es el del paso del itinerario: 100vw menos los paddings que lo
+// contienen (1.3rem del .itinerary-container + 1.5rem del .itinerary-steps-container +
+// 1rem del .stop-items-container = 82px).
+const STOP_IMG_SIZES = "calc(100vw - 82px)";
 
 export default function ItineraryComponent({ itinerary, desktopImgs }: { itinerary: Itinerary; desktopImgs: { img: string; alt: string }[] }) {
 
@@ -72,7 +78,16 @@ export default function ItineraryComponent({ itinerary, desktopImgs }: { itinera
                                                 <div className="stop-item-text" dangerouslySetInnerHTML={{ __html: internal_item.title }}></div>
                                                 {internal_item.mobile_img &&
                                                     <div className="stop-item-img">
-                                                        <img src={optimizedUrl(internal_item.mobile_img.img, 384)} alt={internal_item.mobile_img.alt} width="300" height="200" loading="lazy" />
+                                                        <img
+                                                            src={optimizedUrl(internal_item.mobile_img.img, 828)}
+                                                            srcSet={optimizedSrcSet(internal_item.mobile_img.img)}
+                                                            sizes={STOP_IMG_SIZES}
+                                                            alt={internal_item.mobile_img.alt}
+                                                            width="400"
+                                                            height="300"
+                                                            loading="lazy"
+                                                            decoding="async"
+                                                        />
                                                     </div>
                                                 }
                                             </div>
@@ -87,6 +102,12 @@ export default function ItineraryComponent({ itinerary, desktopImgs }: { itinera
                         <div className="relative h-full w-full overflow-visible">
                             {desktopImgs.map((element, i) => {
                                 const layout = desktopImageLayouts[i % desktopImageLayouts.length];
+                                // Las fotos rotadas viven en la mitad derecha del
+                                // .itinerary-container (max-width 1200px con 1.3rem de
+                                // padding por lado, o sea 579px de mitad) y cada una ocupa
+                                // el porcentaje de arriba.
+                                const widthRatio = parseInt(layout.width, 10) / 100;
+                                const sizes = `(min-width: 1200px) ${Math.round(579 * widthRatio)}px, ${Math.round(50 * widthRatio)}vw`;
 
                                 return (
                                     <div
@@ -103,10 +124,13 @@ export default function ItineraryComponent({ itinerary, desktopImgs }: { itinera
                                     >
                                         <img
                                             src={optimizedUrl(element.img, 640)}
+                                            srcSet={optimizedSrcSet(element.img)}
+                                            sizes={sizes}
                                             alt={element.alt}
                                             width="600"
                                             height="400"
                                             loading="lazy"
+                                            decoding="async"
                                             className="block h-auto w-full object-cover"
                                         />
                                     </div>
