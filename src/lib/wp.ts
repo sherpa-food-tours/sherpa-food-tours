@@ -114,6 +114,36 @@ async function fetchArticleCities(): Promise<Map<string, string>> {
     return cities;
 }
 
+type WPUser = { id: number; name: string; slug?: string; description?: string; [key: string]: unknown };
+
+// Reemplazo del listado /users: sólo devuelve autores con artículos publicados, que es
+// lo mismo que el listado público de WordPress y lo único que usan las páginas de autor
+// y el sitemap.
+async function fetchUsersFromPostAuthors(): Promise<WPUser[]> {
+    const authorIds = new Set<number>();
+    for (let page = 1; page < 20; page++) {
+        // `_fields=author` solo también lo bloquea el firewall (regla anti-enumeración de
+        // usuarios); con `id,author` pasa.
+        const response = await wpFetch(`${apiUrl}/posts?per_page=100&page=${page}&_fields=id,author`, {
+            next: { revalidate: 3600 },
+        });
+        if (!response.ok) break; // 400 = no hay más páginas
+        const posts: { author?: number }[] = await response.json();
+        for (const post of posts) {
+            if (post.author) authorIds.add(post.author);
+        }
+        if (posts.length < 100) break;
+    }
+
+    const users = await Promise.all(
+        [...authorIds].map(async (id) => {
+            const response = await wpFetch(`${apiUrl}/users/${id}`, { next: { revalidate: 3600 } });
+            return response.ok ? ((await response.json()) as WPUser) : null;
+        })
+    );
+    return users.filter((user): user is WPUser => user !== null);
+}
+
 async function getArticleCities(): Promise<Map<string, string>> {
     if (!articleCitiesCache || Date.now() - articleCitiesCache.at > ARTICLE_CITIES_TTL_MS) {
         const promise = fetchArticleCities().catch((error) => {
@@ -509,6 +539,14 @@ export const wp = {
             const response = await wpFetch(url, {
                 next: { revalidate: 3600 } // cachea por 1 hora
             });
+            if (response.status === 401 || response.status === 403) {
+                // Desde ~18/11/2026 el firewall de Hostinger (LiteSpeed) bloquea el listado
+                // /users con 403, pero deja pasar /users/{id}. Sin este camino, cada deploy
+                // dejaba las páginas de autor en 500 y el sitemap sin autores.
+                console.warn(`⚠️ /users respondió ${response.status}: se arman los autores desde los posts`);
+                const data = await fetchUsersFromPostAuthors();
+                return data.length ? { ok: true as const, data } : { ok: false as const, data: null };
+            }
             if (!response.ok) {
                 console.warn(`⚠️ No se pudieron obtener los usuarios: ${response.status}`);
                 return { ok: false as const, data: null };
