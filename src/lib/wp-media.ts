@@ -67,6 +67,31 @@ export function optimizedUrl(src: string | undefined, width = 1200): string | un
     return `/_next/image/?url=${encodeURIComponent(forceHttps(src))}&w=${snapWidth(width)}&q=${IMAGE_QUALITY}`;
 }
 
+/**
+ * Anchos por defecto para el srcset de las fotos de tour. Son valores de ALLOWED_WIDTHS:
+ * 384 cubre DPR 1, 640/828 el mobile y las cajas chicas en DPR 2, y 1080/1200 la imagen
+ * grande de la galeria en desktop con DPR 2 (577px x 2 = 1154).
+ */
+export const SRCSET_WIDTHS = [384, 640, 828, 1080, 1200];
+
+/**
+ * srcset para una imagen de WordPress: un candidato por ancho, todos por el optimizador.
+ *
+ * El descriptor `w` sale de snapWidth, no del ancho pedido: el optimizador sirve el ancho
+ * redondeado, y si el descriptor dijera otra cosa el browser elegiria mal (declararia una
+ * imagen de 640 como si midiera 600).
+ */
+export function optimizedSrcSet(src: string | undefined, widths: number[] = SRCSET_WIDTHS): string | undefined {
+    if (!src) return undefined;
+    // Un src ya optimizado hace que optimizedUrl devuelva siempre la misma URL (es
+    // idempotente): saldrian candidatos identicos con descriptores distintos.
+    if (src.startsWith("/_next/image")) return undefined;
+
+    // Dos anchos pedidos pueden caer en el mismo ancho permitido; se deja uno solo.
+    const snapped = [...new Set(widths.map(snapWidth))].sort((a, b) => a - b);
+    return snapped.map((w) => `${optimizedUrl(src, w)} ${w}w`).join(", ");
+}
+
 /** Igual que optimizedUrl pero absoluta, para og:image, twitter:image y JSON-LD. */
 export function absoluteOptimizedUrl(src: string, width = 1200): string {
     if (!src) return src;

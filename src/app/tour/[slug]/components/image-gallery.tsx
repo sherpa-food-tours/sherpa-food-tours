@@ -4,7 +4,32 @@
 import { Image, ChevronLeft, ChevronRight } from "lucide-react";
 import "../../../../ui/components/css/image-gallery.css";
 import { useState, useEffect } from "react";
-import { optimizedUrl } from "@/lib/wp-media";
+import { optimizedUrl, optimizedSrcSet } from "@/lib/wp-media";
+
+// La galeria es un grid de 4 columnas desde 768px: la primera foto ocupa 2 columnas y 2
+// filas, la segunda 2 columnas y las dos ultimas 1 cada una. En mobile son 2 columnas con
+// la primera a todo el ancho (la cuarta queda display:none). El contenedor es
+// .tour-hero-section: 1.3rem de padding por lado, max-width 600px en mobile y 1200px desde
+// 1024px. Con el gap de .3rem, en un grid de 1200 las columnas miden 286px y la foto
+// grande 577px: de ahi salen estos sizes, y de ahi venia el problema (se pedian 384px de
+// ancho para cajas de 577, el doble en pantallas retina).
+const GALLERY_SLOTS = [
+    {
+        sizes: "(min-width: 1200px) 577px, (min-width: 768px) calc(50vw - 23px), (min-width: 600px) 558px, calc(100vw - 42px)",
+        width: 577,
+        height: 600,
+    },
+    {
+        sizes: "(min-width: 1200px) 577px, (min-width: 768px) calc(50vw - 23px), (min-width: 600px) 277px, calc(50vw - 23px)",
+        width: 577,
+        height: 298,
+    },
+    {
+        sizes: "(min-width: 1200px) 286px, (min-width: 768px) calc(25vw - 14px), (min-width: 600px) 277px, calc(50vw - 23px)",
+        width: 286,
+        height: 298,
+    },
+] as const;
 
 export default function ImageGallery({ images }: { images: { img: string; alt: string }[] }) {
 
@@ -58,11 +83,27 @@ export default function ImageGallery({ images }: { images: { img: string; alt: s
 
     return (
         <div className="image-gallery">
-            {images && images.slice(0, 4).map((image, i) => (
-                <div key={image.img + i} className="image-item" onClick={() => openGallery(i)}>
-                    <img src={optimizedUrl(image.img, 384)} alt={image.alt || 'Tour Image'} width="300" height="200" loading="lazy" decoding="async" />
-                </div>
-            ))}
+            {images && images.slice(0, 4).map((image, i) => {
+                // La cuarta foto mide igual que la tercera.
+                const slot = GALLERY_SLOTS[Math.min(i, GALLERY_SLOTS.length - 1)];
+
+                return (
+                    <div key={image.img + i} className="image-item" onClick={() => openGallery(i)}>
+                        <img
+                            src={optimizedUrl(image.img, slot.width)}
+                            srcSet={optimizedSrcSet(image.img)}
+                            sizes={slot.sizes}
+                            alt={image.alt || 'Tour Image'}
+                            width={slot.width}
+                            height={slot.height}
+                            // La primera foto esta arriba de todo: es el LCP de la pagina.
+                            loading={i === 0 ? "eager" : "lazy"}
+                            fetchPriority={i === 0 ? "high" : undefined}
+                            decoding="async"
+                        />
+                    </div>
+                );
+            })}
             <div className="total-images" onClick={() => openGallery(0)}>
                 <Image />
                 <p>{images.length}</p>
