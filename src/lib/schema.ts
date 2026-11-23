@@ -34,7 +34,9 @@ const SOCIAL_PROFILES: Record<string, string> = {
 
 const ORGANIZATION_FALLBACK = {
     description: "Authentic food tours and culinary experiences around the world with local guides",
-    email: "info@sherpafoodtours.com",
+    // info@ no existe como casilla (Trello "FOOTER URGENTE"). acf.org_email no está creado en ACF,
+    // así que este fallback es lo que se muestra en el footer, en /contact y en el schema Organization.
+    email: "hello@sherpafoodtours.com",
     // Grafía del documento de referencia de la agencia ("Travelers'", no "Travellers'").
     award: "2026 Tripadvisor Travelers' Choice Award - Food & Drink",
 };

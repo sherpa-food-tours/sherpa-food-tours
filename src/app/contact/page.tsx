@@ -1,7 +1,7 @@
 import { FormContact } from "@/ui/components/form-contact";
 import TallyForm from "@/ui/components/tally-form";
 import { Metadata } from "next";
-import { buildBreadcrumbSchema, getBaseUrl, ORGANIZATION_ID, WEBSITE_ID } from "@/lib/schema";
+import { buildBreadcrumbSchema, getBaseUrl, getOrganizationData, ORGANIZATION_ID, WEBSITE_ID } from "@/lib/schema";
 import Breadcrumbs from "@/ui/components/breadcrumbs";
 
 export const metadata: Metadata = {
@@ -60,6 +60,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ContactPage() {
+    // Mismo origen que el footer, para que el email no vuelva a quedar distinto en un lugar y otro.
+    const { email } = await getOrganizationData();
     const contactPageSchema = {
         "@context": "https://schema.org",
         "@type": "ContactPage",
@@ -89,7 +91,7 @@ export default async function ContactPage() {
                 <section className="contact-section !max-w-[700px] mx-auto">
                     <h1>Got any questions? <span>Contact Us!</span></h1>
                     <p style={{ textAlign: 'center', marginBottom: '1.5rem', opacity: 0.8 }}>
-                        Email us at <a href="mailto:info@sherpafoodtours.com">info@sherpafoodtours.com</a>
+                        Email us at <a href={`mailto:${email}`}>{email}</a>
                     </p>
                     {/* <FormContact /> */}
                     {/* Trello #17: sin este H2 la página no tenía ninguno. contact.css ya lo estiliza. */}
