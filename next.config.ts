@@ -23,6 +23,11 @@ const nextConfig = {
     staticGenerationMaxConcurrency: 2,
     staticGenerationMinPagesPerWorker: 25,
     staticGenerationRetryCount: 3,
+    // Next usa por defecto (cores - 1) workers. Con la máquina de 2 cores de Vercel era 1;
+    // con la de 4 cores del plan Pro pasan a ser 3, y 3 workers x 2 páginas cada uno
+    // superan los ~20 pedidos simultáneos que aguanta Hostinger. Se fija en 1 para que el
+    // build no dependa de la máquina que asigne Vercel.
+    cpus: 1,
   },
 
   compress: true, // Habilitar compresión GZIP
