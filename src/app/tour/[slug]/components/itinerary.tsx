@@ -2,13 +2,21 @@
 
 import type { Itinerary } from "@/types/itinerary";
 import { useEffect, useRef } from "react";
-import { optimizedUrl, optimizedSrcSet } from "@/lib/wp-media";
+import { optimizedUrl, optimizedSrcSet, type WpImage } from "@/lib/wp-media";
 
-// .stop-item-img solo se ve por debajo de 460px (arriba queda display:none) en una caja de
-// aspect-ratio 4/3. El ancho es el del paso del itinerario: 100vw menos los paddings que lo
-// contienen (1.3rem del .itinerary-container + 1.5rem del .itinerary-steps-container +
-// 1rem del .stop-items-container = 82px).
-const STOP_IMG_SIZES = "calc(100vw - 82px)";
+// .stop-item-img solo se ve por debajo de 460px (arriba queda display:none). Es una caja
+// vertical (aspect-ratio 3/4) con max-height 300px, que tambien le limita el ancho: mide
+// 225x300 en cualquier celular. Con object-fit: cover una foto horizontal se dibuja mas
+// ancha que la caja (3:2 -> 450px), y `sizes` tiene que declarar ese ancho, no el de la
+// caja: si no, el browser baja una imagen chica y la estira.
+const STOP_IMG_BOX = { width: 225, height: 300 };
+
+function stopImgSizes(image: WpImage): string {
+    const aspect = image.width && image.height ? image.width / image.height : 3 / 2;
+    return `${Math.ceil(Math.max(STOP_IMG_BOX.width, STOP_IMG_BOX.height * aspect))}px`;
+}
+
+const STOP_IMG_SRCSET_WIDTHS = [384, 640, 828, 1080, 1200, 1920];
 
 export default function ItineraryComponent({ itinerary, desktopImgs }: { itinerary: Itinerary; desktopImgs: { img: string; alt: string }[] }) {
 
@@ -80,8 +88,8 @@ export default function ItineraryComponent({ itinerary, desktopImgs }: { itinera
                                                     <div className="stop-item-img">
                                                         <img
                                                             src={optimizedUrl(internal_item.mobile_img.img, 828)}
-                                                            srcSet={optimizedSrcSet(internal_item.mobile_img.img)}
-                                                            sizes={STOP_IMG_SIZES}
+                                                            srcSet={optimizedSrcSet(internal_item.mobile_img.img, STOP_IMG_SRCSET_WIDTHS)}
+                                                            sizes={stopImgSizes(internal_item.mobile_img)}
                                                             alt={internal_item.mobile_img.alt}
                                                             width="400"
                                                             height="300"
