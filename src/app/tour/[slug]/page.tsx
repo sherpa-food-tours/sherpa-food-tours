@@ -332,27 +332,38 @@ export default async function TourPage({ params }: { params: Promise<{ slug: str
     const priceValidUntil = new Date();
     priceValidUntil.setFullYear(priceValidUntil.getFullYear() + 1);
 
-    // El tour es la entidad primaria: Product habilita el rich result de estrellas
-    // (TouristTrip no soporta aggregateRating y Google lo descarta con
-    // "Review: Invalid object type for field <parent_node>"). Se mantiene TouristTrip
-    // en el mismo nodo para no perder el marcado de viaje que ya validaba correctamente.
+    // Sin aggregateRating: Propellic (feedback del 15/10, Trello "Google search console:
+    // structured data") pidió sacarlo porque las reseñas declaradas por la propia empresa
+    // pueden tomarse como self-serving/spam.
+    //
+    // Sin rating, Google exige que un Product tenga offers; si no, la prueba de resultados
+    // enriquecidos lo marca como error. Por eso el nodo es Product solo cuando hay precio
+    // numérico; los tours sin precio (p. ej. "From $90" o vacío en WP) quedan como
+    // TouristTrip, que ya validaba correctamente.
+    const hasOffer = !!ACF_PRICE && ACF_PRICE !== "" && !isNaN(Number(ACF_PRICE));
+
+    // Resumen visible junto a las estrellas del hero ("5.0 · 1000 reviews"). Ya no se
+    // declara en el JSON-LD, pero se sigue mostrando en la página.
     const googleReviewCount = parseReviewCount(reviews.google.amount);
     const tripadvisorReviewCount = parseReviewCount(reviews.tripadvisor.amount);
     const totalReviewCount = googleReviewCount + tripadvisorReviewCount;
     const ratingValue = Number(stars);
+    const hasRatingSummary = totalReviewCount > 0 && ratingValue >= 1 && ratingValue <= 5;
 
     const productSchema: Record<string, unknown> = {
         "@context": "https://schema.org",
-        "@type": ["Product", "TouristTrip"],
+        "@type": hasOffer ? ["Product", "TouristTrip"] : "TouristTrip",
         "@id": `${tourUrl}#tour`,
         "name": title,
         "description": acf.tour_description,
         "image": [absoluteOptimizedUrl(featuredImage.img, 1200)],
         "url": tourUrl,
-        "brand": {
-            "@type": "Brand",
-            "name": "Sherpa Food Tours"
-        },
+        ...(hasOffer ? {
+            "brand": {
+                "@type": "Brand",
+                "name": "Sherpa Food Tours"
+            }
+        } : {}),
         "touristType": "Food and wine travelers",
         "provider": {
             "@type": "Organization",
@@ -371,7 +382,7 @@ export default async function TourPage({ params }: { params: Promise<{ slug: str
                 }))
             }
         } : {}),
-        ...(ACF_PRICE && ACF_PRICE !== "" && !isNaN(Number(ACF_PRICE)) ? {
+        ...(hasOffer ? {
             "offers": {
                 "@type": "Offer",
                 "price": Number(ACF_PRICE),
@@ -384,21 +395,6 @@ export default async function TourPage({ params }: { params: Promise<{ slug: str
             }
         } : {})
     };
-
-    // El aggregateRating debe coincidir con lo visible en la página: las estrellas del
-    // hero y el total de reseñas que se renderiza junto a ellas. Si falta el dato en WP
-    // no se emite, en vez de inventar un valor.
-    const hasAggregateRating = totalReviewCount > 0 && ratingValue >= 1 && ratingValue <= 5;
-
-    if (hasAggregateRating) {
-        productSchema["aggregateRating"] = {
-            "@type": "AggregateRating",
-            "ratingValue": ratingValue,
-            "bestRating": 5,
-            "worstRating": 1,
-            "reviewCount": totalReviewCount
-        };
-    }
 
     const breadcrumbItems = [
         { name: "Home", url: baseUrl + "/" },
@@ -438,7 +434,7 @@ export default async function TourPage({ params }: { params: Promise<{ slug: str
                                     {Array.from({ length: stars }).map((_, i) => (
                                         <Star key={i} fill="[#E7B53F]" />
                                     ))}
-                                    {hasAggregateRating && (
+                                    {hasRatingSummary && (
                                         <p className="rating-summary">
                                             {ratingValue.toFixed(1)} &middot; {totalReviewCount} reviews
                                         </p>
